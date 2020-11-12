@@ -5,9 +5,12 @@ USAGE:             Compile with -std=c99
 COMPILER:          GNU gcc compiler on Linux
 NOTES:             
 MODIFICATION HISTORY:
-Author             Date               Version
----------------    ----------         --------------
-Conner Fissell     11-08-2020         1.0 - Started messing around
+Author              Date                Version
+---------------     ----------          --------------
+Conner Fissell      11-08-2020          1.0 - Started messing around
+                    11-11-2020          1.1 - Added inital struct, changed main and
+                                              runner function to align with Pthreads
+                    11-12-2020          1.2 - Added a LL queue. 
 ----------------------------------------------------------------------------- */
 #include <limits.h>
 #include <stdbool.h>
@@ -27,9 +30,15 @@ bool done = false;
 void* calculate_square(void* arg);
 void *runner(void *param);
 
-struct MathRunnerStruct{
-    long long limit; 
-    long long answer;
+// Linked List node that holds the task
+struct QueueNode {
+  char task;
+  struct QueueNode* next;
+};
+
+// Front stores the front node, rear stores the last node
+struct TaskQueue {
+  struct QueueNode *front, *rear;
 };
 
 
@@ -62,7 +71,10 @@ int main(int argc, char* argv[])
   // Thread ID
   pthread_t thread1[workerCount];
 
-  // Create thread
+
+  
+
+  // Create worker threads
   pthread_create(&thread1, NULL, calculate_square, &num);
 
 
@@ -90,6 +102,8 @@ int main(int argc, char* argv[])
 
 
 
+
+
   fclose(fin);
   
   // print results
@@ -109,7 +123,7 @@ NOTES:
 void* calculate_square(void* arg)
 {
 
-  int* number = (int*) arg;
+  long* number = (long*) arg;
 
 
   // calculate the square
@@ -123,24 +137,99 @@ void* calculate_square(void* arg)
   sum += the_square;
 
   // now we also tabulate some (meaningless) statistics
-  if (*number % 2 == 1) 
-  {
+  if (*number % 2 == 1) {
     // how many of our numbers were odd?
     odd++;
   }
 
   // what was the smallest one we had to deal with?
-  if (*number < min) 
-  {
+  if (*number < min) {
     min = *number;
   }
 
   // and what was the biggest one?
-  if (*number > max) 
-  {
+  if (*number > max) {
     max = *number;
   }
 
   pthread_exit(0);
 
+}
+
+/* -----------------------------------------------------------------------------
+FUNCTION:          
+DESCRIPTION:       
+RETURNS:         
+NOTES:             
+------------------------------------------------------------------------------- */
+struct QueueNode* newNode(char task)
+{
+  struct QueueNode* temp = (struct QueueNode*)malloc(sizeof(struct QueueNode));
+  temp->task = task;
+  temp->next = NULL;
+
+  return temp;
+}
+
+/* -----------------------------------------------------------------------------
+FUNCTION:          
+DESCRIPTION:       
+RETURNS:         
+NOTES:             
+------------------------------------------------------------------------------- */
+struct TaskQueue* createQueue()
+{
+  struct TaskQueue* queue = (struct TaskQueue*)malloc(sizeof(struct TaskQueue));
+  queue->front = queue->rear; 
+  queue->rear = NULL;
+
+  return queue;
+}
+
+/* -----------------------------------------------------------------------------
+FUNCTION:          
+DESCRIPTION:       
+RETURNS:         
+NOTES:             
+------------------------------------------------------------------------------- */
+void enQueue(struct TaskQueue* queue, char task)
+{
+  // create a new node
+  struct QueueNode* temp = newNode(task);
+
+  // if queue is empty, then make temp both the front and rear node
+  if(queue->rear == NULL){
+    queue->front = queue->rear = temp;
+  }
+
+  else{
+    queue->rear->next = temp;
+    queue->rear = temp; 
+  }
+}
+
+/* -----------------------------------------------------------------------------
+FUNCTION:          
+DESCRIPTION:       
+RETURNS:         
+NOTES:             
+------------------------------------------------------------------------------- */
+void deQueue(struct TaskQueue* queue)
+{
+  // if queue is empty, then return NULL
+  if(queue->front == NULL){
+    printf("The task queue is empty..\n");
+  }
+
+  else{
+    // Store front in temp and move it one node back
+    struct QueueNode* temp = queue->front;
+    queue->front = queue->front->next;
+
+    // if front becomes NULL, then rear becomes NULL
+    if(queue->front == NULL)
+      queue->rear  = NULL;
+
+    free(temp); 
+  }
 }

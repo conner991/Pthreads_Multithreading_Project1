@@ -24,5 +24,5 @@ all: clean $(TARGETS)
 $(TARGETS):
 		$(CC_C) $(CFLAGS) $@.c -o $@
 	
-clean: 
+clean:
 		rm -f $(TARGETS)
