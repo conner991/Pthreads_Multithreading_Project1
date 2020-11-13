@@ -26,9 +26,19 @@ long min = INT_MAX;
 long max = INT_MIN;
 bool done = false;
 
+// Use default initialization
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Declaration of thread condition variable
+pthread_cond_t cv1, cv2 = PTHREAD_COND_INITIALIZER;
+
 // function prototypes
 void* calculate_square(void* arg);
-void *runner(void *param);
+struct QueueNode* newNode(char task);
+struct TaskQueue* createQueue();
+void enQueue(struct TaskQueue* queue, char task);
+void deQueue(struct TaskQueue* queue);
+
 
 // Linked List node that holds the task
 struct QueueNode {
@@ -36,7 +46,7 @@ struct QueueNode {
   struct QueueNode* next;
 };
 
-// Front stores the front node, rear stores the last node
+// Front stores the front node, rear stores the previous node
 struct TaskQueue {
   struct QueueNode *front, *rear;
 };

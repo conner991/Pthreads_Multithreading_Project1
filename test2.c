@@ -59,10 +59,11 @@ int main(int argc, char *argv[])
     struct sumRunnerStruct args[numArgs];
     
     for(int i = 0; i < numArgs; i++) {
+        
         args[i].limit = atoll(argv[i + 1]);
 
         /*Every loop iteration, we're gonna build a new struct and we're gonna pass
-        in the pointer in the create function. */
+        in the pointer to that struct in the create function. */
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         pthread_create(&tids[i], &attr, sumRunner, &args[i]);
