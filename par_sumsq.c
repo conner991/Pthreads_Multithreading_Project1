@@ -22,8 +22,8 @@ Conner Fissell      11-08-2020          1.0 - Started messing around
 // aggregate variables
 long sum = 0;
 long odd = 0;
-long min = INT_MAX;
-long max = INT_MIN;
+long max = INT_MAX;
+long min = INT_MIN;
 bool done = false;
 
 // Use default initialization
@@ -35,12 +35,12 @@ pthread_cond_t cv1, cv2;
 // function prototypes
 void* createWorker(void* arg);
 void calculateSquare(long num);
-struct QueueNode* newNode(char task);
+struct QueueNode* newNode(long task);
 struct TaskQueue* createQueue();
 void enQueue(struct TaskQueue* queue, long task);
 long deQueue(struct TaskQueue* queue);
 bool isEmpty(struct TaskQueue* queue);
-
+void clearQueue(struct TaskQueue* queue);
 
 // Linked List node that holds the task
 struct QueueNode {
@@ -92,12 +92,9 @@ int main(int argc, char* argv[])
 
   // Initialize Threads
   for(int i = 0; i < workerCount; i++){
-    pthread_create(&workers[i], NULL, createWorker, (void*)taskQueue);
+    pthread_create(&workers[i], NULL, createWorker, &taskQueue);
   }
-  
 
-  
-  //int processNum = 0;
   
 
   char action;
@@ -107,20 +104,17 @@ int main(int argc, char* argv[])
   while (fscanf(fin, "%c %ld\n", &action, &num) == 2) {
     
     if (action == 'p') {
-      // process, do some work
-      
+      // lock mutex
       pthread_mutex_lock(&queueMutex);
 
       // enqueue a task
-      enqueue(taskQueue, num);
+      enQueue((struct TaskQueue*)taskQueue, num);
 
       // condition signal
       pthread_cond_signal(&cv1);
 
       // unlock mutex
       pthread_mutex_unlock(&queueMutex);
-      
-      
     }
 
     else if (action == 'w') {
@@ -138,6 +132,7 @@ int main(int argc, char* argv[])
   // close the input file
   fclose(fin);
 
+  //while(taskQueue->front);
 
   done = true;
   pthread_mutex_lock(&queueMutex);
@@ -150,7 +145,7 @@ int main(int argc, char* argv[])
   }
 
   // clean up tasks
-  clearQueue(taskQueue);
+  clearQueue((struct TaskQueue*)taskQueue);
   
   // print results
   printf("%ld %ld %ld %ld\n", sum, odd, min, max);
@@ -161,9 +156,9 @@ int main(int argc, char* argv[])
 
 
 /* -----------------------------------------------------------------------------
-FUNCTION:          
+FUNCTION:         createWorker(void* arg) 
 DESCRIPTION:       
-RETURNS:         
+RETURNS:          NULL
 NOTES:             
 ------------------------------------------------------------------------------- */
 void* createWorker(void* arg)
@@ -173,7 +168,7 @@ void* createWorker(void* arg)
   while(!done){
     pthread_mutex_lock(&queueMutex);
 
-    while(!done && !isEmpty(taskQueue)){
+    while(!done && !(taskQueue->front)){
       pthread_cond_wait(&cv1, &queueMutex);
     }
 
@@ -194,9 +189,9 @@ void* createWorker(void* arg)
 
 
 /* -----------------------------------------------------------------------------
-FUNCTION:          
+FUNCTION:         calculateSquare(long taskNumber) 
 DESCRIPTION:      
-RETURNS:         
+RETURNS:          void
 NOTES:             
 ------------------------------------------------------------------------------- */
 void calculateSquare(long taskNumber)
@@ -236,12 +231,12 @@ void calculateSquare(long taskNumber)
 }
 
 /* -----------------------------------------------------------------------------
-FUNCTION:          
+FUNCTION:        newNode(long task)  
 DESCRIPTION:       
-RETURNS:         
+RETURNS:         struct QueueNode*
 NOTES:             
 ------------------------------------------------------------------------------- */
-struct QueueNode* newNode(char task)
+struct QueueNode* newNode(long task)
 {
   struct QueueNode* temp = (struct QueueNode*)malloc(sizeof(struct QueueNode));
   temp->task = task;
@@ -251,9 +246,9 @@ struct QueueNode* newNode(char task)
 }
 
 /* -----------------------------------------------------------------------------
-FUNCTION:          
+FUNCTION:        createQueue()  
 DESCRIPTION:       
-RETURNS:         
+RETURNS:         struct TaskQueue*
 NOTES:             
 ------------------------------------------------------------------------------- */
 struct TaskQueue* createQueue()
@@ -265,9 +260,9 @@ struct TaskQueue* createQueue()
 }
 
 /* -----------------------------------------------------------------------------
-FUNCTION:          
-DESCRIPTION:       
-RETURNS:         
+FUNCTION:        enQueue(struct TaskQueue* queue, long task)  
+DESCRIPTION:      
+RETURNS:         void
 NOTES:             
 ------------------------------------------------------------------------------- */
 void enQueue(struct TaskQueue* queue, long task)
@@ -278,76 +273,57 @@ void enQueue(struct TaskQueue* queue, long task)
   // if queue is empty, then make temp both the front and rear node
   if(queue->rear == NULL){
     queue->front = queue->rear = temp;
+    return;
   }
 
-  else{
-    queue->rear->next = temp;
-    queue->rear = temp; 
-  }
-}
-
-/* -----------------------------------------------------------------------------
-FUNCTION:          
-DESCRIPTION:       
-RETURNS:         
-NOTES:             
-------------------------------------------------------------------------------- */
-long deQueue(struct TaskQueue* queue)
-{
-  // if queue is empty, then return NULL
-  if(isEmpty(queue)){
-    printf("The task queue is empty..\n");
-    return 0;
-  }
-
-  else{
-    // Store front in temp and move it one node back
-    struct QueueNode* temp = queue->front;
-    queue->front = temp->next;
-
-    // if front becomes NULL, then rear becomes NULL
-    if(queue->front == NULL)
-      queue->rear  = NULL;
-
-    long t = queue->front->task;
-
-    free(temp); 
-
-    return t;
-  }
-}
-
-/* -----------------------------------------------------------------------------
-FUNCTION:          
-DESCRIPTION:       
-RETURNS:         
-NOTES:             
-------------------------------------------------------------------------------- */
-bool isEmpty(struct TaskQueue* queue)
-{
-  bool status;
-
-  if(queue->front == NULL)
-    status = false;
-  else
-    status = true;
-
-  return status;
+  
+  queue->rear->next = temp;
+  queue->rear = temp; 
   
 }
 
 /* -----------------------------------------------------------------------------
-FUNCTION:          
+FUNCTION:        deQueue(struct TaskQueue* queue)
 DESCRIPTION:       
-RETURNS:         
+RETURNS:         long
+NOTES:             
+------------------------------------------------------------------------------- */
+long deQueue(struct TaskQueue* queue)
+{
+
+  struct QueueNode* temp = queue->front;
+
+  // if queue is empty, then return NULL
+  if(temp){
+    queue->front = temp->next;
+  }
+
+  if(!temp)
+    return 0;
+  
+  long t = temp->task;
+
+  free(temp); 
+
+  return t;
+
+}
+
+/* -----------------------------------------------------------------------------
+FUNCTION:          clearQueue(struct TaskQueue* queue)
+DESCRIPTION:       
+RETURNS:           void
 NOTES:             
 ------------------------------------------------------------------------------- */
 void clearQueue(struct TaskQueue* queue)
-{
-  long value;
-
-  while(!isEmpty(queue)){
-    value = dequeue(queue);
+{ 
+  // if queue is empty
+  if(!queue){
+    return;
+  }
+  
+  while(queue->front){
+    deQueue(queue);
   }
 
   free(queue);
