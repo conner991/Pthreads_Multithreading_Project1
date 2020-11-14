@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
         
         args[i].limit = atoll(argv[i + 1]);
 
-        /*Every loop iteration, we're gonna build a new struct and we're gonna pass
-        in the pointer to that struct in the create function. */
+        /*Every loop iteration, we're gonna pass in the pointer to 
+        that struct in the create function. */
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         pthread_create(&tids[i], &attr, sumRunner, &args[i]);
@@ -95,7 +95,7 @@ NOTES:             The way it is from test1 only gives us one answer, even with 
                 answer because we had three separate copies of sumRunner(), all executing at
                 once, all accessing a global variable and adding to it. There are likely to 
                 be synchronization issues in the critical section (sum += 1;). Don't want to 
-                continuously add to the same value and I can't just use a single global variable
+                continuously add to the same value and we can't just use a single global variable
                 to return the value. So we want to pass back the answer. Dynamically allocate 
                 some space and then pass a pointer back, next example. Can pass the value in
                 somehow. 
@@ -105,7 +105,7 @@ void *sumRunner(void* arg)
     /*Assuming that the caller passes in the appropriate argument here, we can access
     the limit as well as the answer. This is good bacause now we can pass any data 
     into our struct. We can begin adding extra fields, and access them in here. We are limited
-    by passing in only a single pointer so the struct our way around that. */
+    by passing in only a single pointer so the struct is our way around that. */
 
     struct sumRunnerStruct *argStruct = (struct sumRunnerStruct*) arg;
 

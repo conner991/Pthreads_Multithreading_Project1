@@ -79,12 +79,13 @@ void* producer(void* arg)
     int i;
     for(i = 0; i < loops; i++){
         pthread_mutex_lock(&mutex);
+        
         while(count == max){
             pthread_cond_wait(&empty, &mutex);
         }
-
         put(i);
         pthread_cond_signal(&fill);
+        
         pthread_mutex_unlock(&mutex);
     }
 }
@@ -95,11 +96,13 @@ void* consumer(void* arg)
     int i;
     for(i = 0; i < loops; i++){
         pthread_mutex_lock(&mutex);
+        
         while(count == 0){
             pthread_cond_wait(&fill, &mutex);
         }
         int temp = get();
         pthread_cond_signal(&empty);
+        
         pthread_mutex_unlock(&mutex);
         printf("%d\n", temp);
     }
